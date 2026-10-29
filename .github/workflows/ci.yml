@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The ERP is tested against the real EmberKV server, built from its own
+# repository and checked out next to this one, exactly as in development.
+env:
+  EMBERKV_REPO: ${{ github.repository_owner }}/emberkv
+
+jobs:
+  check:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: erp }
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.EMBERKV_REPO }}", path: emberkv }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: erp/package-lock.json }
+      - run: npm ci
+        working-directory: erp
+      - run: npm run lint && npm run typecheck && npm test
+        working-directory: erp
+      - run: npm run build
+        working-directory: erp
+
+  integration:
+    name: Integration & end-to-end (PostgreSQL + EmberKV)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: kiln, POSTGRES_PASSWORD: kiln, POSTGRES_DB: kiln }
+        ports: ["5433:5432"]
+        options: --health-cmd "pg_isready -U kiln" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: erp }
+      - uses: actions/checkout@v4
+        with: { repository: "${{ env.EMBERKV_REPO }}", path: emberkv }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: emberkv }
+      - name: Build EmberKV
+        run: cargo build --release --locked -p emberkv-server -p emberkv-cli
+        working-directory: emberkv
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm, cache-dependency-path: erp/package-lock.json }
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: erp
+      - name: Start EmberKV with scoped API keys
+        working-directory: erp
+        run: |
+          printf 'DATABASE_URL=postgres://kiln:kiln@127.0.0.1:5433/kiln\nEMBERKV_URL=http://127.0.0.1:8080\nDEMO_MODE=true\n' > .env.local
+          ./scripts/emberkv-dev.sh > emberkv.log 2>&1 &
+          timeout 30 bash -c 'until curl -sf localhost:8080/readyz; do sleep 0.5; done'
+      - run: npm run test:integration
+        working-directory: erp
+      - run: npm run db:seed && npm run test:e2e
+        working-directory: erp
+        env: { CI: "true" }
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-traces
+          path: |
+            erp/test-results
+            erp/emberkv.log

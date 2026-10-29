@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Components use only these semantic names (bg-surface,
+ * text-muted, border-line, ...), so dark mode is just a second set of values.
+ */
+:root {
+  --bg: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --line: #e5e5e8;
+  --line-strong: #d4d4d8;
+  --text: #18181b;
+  --muted: #5f5f6b;
+  --subtle: #8b8b96;
+  --accent: #d9480f;
+  --accent-hover: #bf3f0c;
+  --accent-soft: #fff1e8;
+  --accent-text: #b33a0a;
+  --focus: #f08c4a;
+
+  --sidebar: #111113;
+  --sidebar-line: #232327;
+  --sidebar-text: #c9c9d1;
+  --sidebar-muted: #7c7c88;
+  --sidebar-active: #1d1d21;
+
+  --ok: #15803d;
+  --ok-soft: #ecfdf3;
+  --warn: #b45309;
+  --warn-soft: #fffbeb;
+  --bad: #b91c1c;
+  --bad-soft: #fef2f2;
+  --info: #1d4ed8;
+  --info-soft: #eff6ff;
+  --violet: #6d28d9;
+  --violet-soft: #f5f3ff;
+
+  --chart-1: #d9480f;
+  --chart-grid: #ececef;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0c0e;
+    --surface: #151518;
+    --surface-2: #1a1a1e;
+    --line: #2a2a30;
+    --line-strong: #3a3a42;
+    --text: #ededf0;
+    --muted: #a3a3ad;
+    --subtle: #75757f;
+    --accent: #f06a28;
+    --accent-hover: #ff7d3d;
+    --accent-soft: #2a1608;
+    --accent-text: #ff9a63;
+    --focus: #f06a28;
+
+    --sidebar: #09090b;
+    --sidebar-line: #1f1f24;
+    --sidebar-active: #18181c;
+
+    --ok: #4ade80;
+    --ok-soft: #0f2418;
+    --warn: #fbbf24;
+    --warn-soft: #2a1f08;
+    --bad: #f87171;
+    --bad-soft: #2a1010;
+    --info: #60a5fa;
+    --info-soft: #0e1a2e;
+    --violet: #a78bfa;
+    --violet-soft: #1c1530;
+
+    --chart-1: #e8601f;
+    --chart-grid: #26262b;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-focus: var(--focus);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-line: var(--sidebar-line);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-grid: var(--chart-grid);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-feature-settings: "cv11", "ss01";
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}

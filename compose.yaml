@@ -1,0 +1,78 @@
+# Kiln ERP and its two backing services.
+#
+#   ./scripts/emberkv-setup.sh            # mint EmberKV keys (once)
+#   docker compose up -d postgres emberkv # dev: run `npm run dev` on the host
+#   docker compose --profile full up -d   # everything, app on http://localhost:3000
+#
+# EmberKV is built from the sibling ../emberkv checkout, so clone both repos
+# side by side. Its ports are bound to loopback only: it speaks plain HTTP and
+# must never be reachable from the internet.
+
+name: kiln
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kiln
+      POSTGRES_PASSWORD: kiln
+      POSTGRES_DB: kiln
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kiln -d kiln"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  emberkv:
+    build: ../emberkv
+    restart: unless-stopped
+    environment:
+      EMBERKV_AUTH_FILE: /etc/emberkv/auth.toml
+      EMBERKV_BACKUP_DIR: /backups
+      EMBERKV_SYNC: periodic
+    volumes:
+      - emberkv-data:/data
+      - emberkv-backups:/backups
+      - ./.dev/emberkv-auth.toml:/etc/emberkv/auth.toml:ro
+    ports: ["127.0.0.1:8080:8080"]
+    stop_grace_period: 30s
+
+  # Migrates and loads the demo company (120 simulated days), then exits.
+  seed:
+    profiles: [full]
+    build:
+      context: ..
+      dockerfile: erp/Dockerfile
+      target: tools
+    command: ["npm", "run", "db:seed"]
+    env_file: [.env.local]
+    environment:
+      DATABASE_URL: postgres://kiln:kiln@postgres:5432/kiln
+      EMBERKV_URL: http://emberkv:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+      emberkv: { condition: service_started }
+
+  app:
+    profiles: [full]
+    build:
+      context: ..
+      dockerfile: erp/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    env_file: [.env.local]
+    environment:
+      DATABASE_URL: postgres://kiln:kiln@postgres:5432/kiln
+      EMBERKV_URL: http://emberkv:8080
+      DEMO_MODE: "true"
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      seed: { condition: service_completed_successfully }
+
+volumes:
+  postgres-data:
+  emberkv-data:
+  emberkv-backups:

@@ -1,0 +1,12 @@
+# Paths are relative to the build context (the parent folder of both repos).
+# Without this file, Docker would upload emberkv/target (gigabytes of Rust builds).
+**
+!erp/
+!emberkv/sdk/typescript/
+erp/node_modules
+erp/.next
+erp/.dev
+erp/.env*
+erp/test-results
+erp/playwright-report
+emberkv/sdk/typescript/node_modules
