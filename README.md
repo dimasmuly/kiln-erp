@@ -1,6 +1,8 @@
 # Kiln ERP
 
-**A full-stack ERP for a distribution company, built on Next.js 16 and PostgreSQL. Its hot state runs on [EmberKV](../emberkv), a key-value store I wrote in Rust.**
+[![CI](https://github.com/dimasmuly/kiln-erp/actions/workflows/ci.yml/badge.svg)](https://github.com/dimasmuly/kiln-erp/actions/workflows/ci.yml)
+
+**A full-stack ERP for a distribution company, built on Next.js 16 and PostgreSQL. Its hot state runs on [EmberKV](https://github.com/dimasmuly/emberkv), a key-value store I wrote in Rust.**
 
 Kiln covers sales orders through invoicing and cash collection, purchasing through supplier payment, a perpetual inventory with weighted-average costing, and a double-entry general ledger. Every business event posts a balanced journal entry. Correctness rules are enforced by PostgreSQL itself, so they hold no matter which code path writes the data: debits equal credits, stock never goes negative, and ledgers are append-only.
 
