@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { act, signIn, signOut } from "./helpers";
+import { act, resetNamespace, signIn, signOut } from "./helpers";
 
 test("an order travels from sales to warehouse to finance, with segregated roles", async ({ page }) => {
   // Sales creates and confirms the order.
@@ -39,6 +39,8 @@ test("an order travels from sales to warehouse to finance, with segregated roles
 });
 
 test("a second editor is locked out while the first holds the EmberKV lease", async ({ browser }) => {
+  // A failed earlier attempt may have left a lease behind, which hides the Edit button.
+  await resetNamespace("locks");
   const first = await (await browser.newContext()).newPage();
   const second = await (await browser.newContext()).newPage();
   await signIn(first, "sales@kiln.test");

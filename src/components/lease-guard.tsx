@@ -8,6 +8,11 @@ import { renewLeaseAction } from "@/server/actions/locks";
 
 const HEARTBEAT_MS = 20_000;
 
+// Releases scheduled by an unmount, keyed by lease. React Strict Mode and fast
+// refresh remount the editor at once; releasing right away would race the
+// remount's heartbeat and could drop the lease it just re-took.
+const pendingRelease = new Map<string, ReturnType<typeof setTimeout>>();
+
 /**
  * Keeps this editor's EmberKV lease alive while the page is open, and
  * releases it when the editor unmounts or the tab closes (sendBeacon survives
@@ -18,6 +23,9 @@ export function LeaseGuard({ kind, id, degraded }: { kind: "sales_order" | "purc
   const [lost, setLost] = useState(false);
 
   useEffect(() => {
+    const key = `${kind}:${id}`;
+    clearTimeout(pendingRelease.get(key));
+    pendingRelease.delete(key);
     const beat = async () => {
       if (!(await renewLeaseAction(kind, id))) setLost(true);
     };
@@ -29,8 +37,15 @@ export function LeaseGuard({ kind, id, degraded }: { kind: "sales_order" | "purc
     return () => {
       clearInterval(timer);
       window.removeEventListener("pagehide", release);
-      // Client-side navigation away from the editor (no pagehide event).
-      release();
+      // Client-side navigation away from the editor (no pagehide event),
+      // unless the same editor mounts again first.
+      pendingRelease.set(
+        key,
+        setTimeout(() => {
+          pendingRelease.delete(key);
+          release();
+        }, 0),
+      );
     };
   }, [kind, id]);
 
