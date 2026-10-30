@@ -77,7 +77,7 @@ Business records never go to EmberKV. Invoice numbers, for example, come from a 
 | App | Next.js 16 (App Router, Turbopack, Cache Components), React 19, TypeScript strict |
 | UI | Tailwind CSS 4 with semantic design tokens (light and dark), lucide icons, accessible charts with a table view |
 | Data | PostgreSQL 16, Drizzle ORM, SQL migrations with hand-written integrity triggers |
-| Hot state | EmberKV (Rust) via `@emberkv/client`, consumed from source in the sibling repo |
+| Hot state | EmberKV (Rust) via `@emberkv/client` and its kit (sessions, rate limits, idempotency, leases, cache), consumed from source in the sibling repo |
 | Validation | Zod 4 at the service boundary |
 | Auth | scrypt password hashes, server-side sessions, role-based permissions |
 | Tests | Vitest (unit and integration against real PostgreSQL and EmberKV), Playwright (end-to-end) |
@@ -145,7 +145,7 @@ src/
     ├── actions/         Server Actions: form → validated command → typed result
     ├── auth/            sessions (EmberKV), scrypt passwords, RBAC
     ├── db/              Drizzle schema and pooled client
-    ├── kv/              every EmberKV integration, each with its fallback
+    ├── kv/              every EmberKV integration: adapters over the SDK kit, each with its fallback
     └── modules/         sales, purchasing, inventory, accounting, dashboard, admin
 drizzle/                 SQL migrations (0001 = integrity triggers)
 scripts/                 migrate, seed (120-day simulation), EmberKV key setup

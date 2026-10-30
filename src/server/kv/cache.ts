@@ -1,4 +1,4 @@
-import { isUnavailable, kv, logDegraded } from "./client";
+import { kv } from "./client";
 
 /**
  * Read-through cache for expensive aggregates (dashboard KPIs). Shared by all
@@ -6,12 +6,9 @@ import { isUnavailable, kv, logDegraded } from "./client";
  * every command that posts to the ledger, so the TTL is only a safety net.
  */
 
-interface CachedValue<T> {
+export interface CacheRead<T> {
   value: T;
   computedAt: number;
-}
-
-export interface CacheRead<T> extends CachedValue<T> {
   source: "emberkv" | "postgres";
 }
 
@@ -25,23 +22,11 @@ export async function readThrough<T>(
   load: () => Promise<T>,
   isFresh: (value: T) => boolean = () => true,
 ): Promise<CacheRead<T>> {
-  const ns = kv().ns.cache;
-  try {
-    const hit = await ns.get<CachedValue<T>>(key);
-    if (hit && isFresh(hit.value.value)) return { ...hit.value, source: "emberkv" };
-  } catch (err) {
-    if (!isUnavailable(err)) throw err;
-    logDegraded("cache-read", err);
-  }
-
-  const fresh: CachedValue<T> = { value: await load(), computedAt: Date.now() };
-  await ns.put(key, fresh, { ttl }).catch((err: unknown) => logDegraded("cache-write", err));
-  return { ...fresh, source: "postgres" };
+  const read = await kv().kit.cache.readThrough(key, { ttl, load, isFresh });
+  return { value: read.value, computedAt: read.computedAt, source: read.source === "cache" ? "emberkv" : "postgres" };
 }
 
 /** Call after a transaction commits; a failed invalidation only delays freshness by one TTL. */
 export async function invalidate(...keys: string[]): Promise<void> {
-  await kv()
-    .ns.cache.batch(keys.map((key) => ({ op: "delete" as const, key })))
-    .catch((err: unknown) => logDegraded("cache-invalidate", err));
+  await kv().kit.cache.invalidate(...keys);
 }

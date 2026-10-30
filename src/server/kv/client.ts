@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { EmberKV, EmberKVError, type Namespace } from "@emberkv/client";
+import { createKit, EmberKV, type Kit, type Namespace } from "@emberkv/client";
 
 import { env } from "../env";
 
@@ -15,14 +15,32 @@ import { env } from "../env";
  *   cache        dashboard aggregates, invalidated on every posting
  *
  * Business records never go here; see docs/adr/0002-emberkv-boundary.md.
+ *
+ * The features themselves (sessions, throttling, exactly-once, leases,
+ * cache) come from the SDK's kit; the modules in this folder only adapt
+ * them to the ERP's names, errors and policies.
  */
 export const NAMESPACES = ["sessions", "limits", "idempotency", "locks", "cache"] as const;
 export type NamespaceName = (typeof NAMESPACES)[number];
+
+/** What the ERP stores with each session, next to the kit's own fields. */
+export interface SessionMeta {
+  userAgent: string | null;
+}
+
+export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 interface KvHandles {
   client: EmberKV;
   admin: EmberKV | null;
   ns: Record<NamespaceName, Namespace>;
+  kit: Kit<SessionMeta>;
+}
+
+function handles(client: EmberKV, admin: EmberKV | null): KvHandles {
+  const ns = Object.fromEntries(NAMESPACES.map((name) => [name, client.namespace(name)])) as KvHandles["ns"];
+  const kit = createKit<SessionMeta>({ client, onDegraded: logDegraded, sessions: { ttlSeconds: SESSION_TTL_SECONDS } });
+  return { client, admin, ns, kit };
 }
 
 const globalForKv = globalThis as unknown as { __kilnKv?: KvHandles };
@@ -35,8 +53,7 @@ function create(): KvHandles {
   const admin = EMBERKV_ADMIN_TOKEN
     ? new EmberKV({ baseUrl: EMBERKV_URL, token: EMBERKV_ADMIN_TOKEN, timeoutMs: 3000 })
     : null;
-  const ns = Object.fromEntries(NAMESPACES.map((name) => [name, client.namespace(name)])) as KvHandles["ns"];
-  return { client, admin, ns };
+  return handles(client, admin);
 }
 
 export function kv(): KvHandles {
@@ -46,8 +63,7 @@ export function kv(): KvHandles {
 
 /** Points the ERP at a different EmberKV (integration tests). */
 export function overrideKv(client: EmberKV, admin: EmberKV | null = null): void {
-  const ns = Object.fromEntries(NAMESPACES.map((name) => [name, client.namespace(name)])) as KvHandles["ns"];
-  globalForKv.__kilnKv = { client, admin, ns };
+  globalForKv.__kilnKv = handles(client, admin);
 }
 
 /**
@@ -58,10 +74,7 @@ export function opaqueKey(value: string): string {
   return createHash("sha256").update(value).digest("hex").slice(0, 32);
 }
 
-/** True when EmberKV could not be reached or is not accepting requests. */
-export function isUnavailable(err: unknown): boolean {
-  return err instanceof EmberKVError && err.retryable;
-}
+export { isUnavailable } from "@emberkv/client";
 
 /** Structured log line for degraded-mode decisions, greppable in production. */
 export function logDegraded(feature: string, err: unknown): void {

@@ -8,7 +8,8 @@ This document explains how Kiln ERP is put together, why, and what happens when 
 src/app/**            Routes. Render data, bind forms to actions. No business logic.
 src/server/actions/   The only write entry point from the browser.
 src/server/modules/   Commands (writes, one transaction each) and queries (reads).
-src/server/kv/        All EmberKV access, each feature with an explicit fallback.
+src/server/kv/        All EmberKV access: thin adapters over the SDK kit (@emberkv/client),
+                      each feature with an explicit fallback.
 src/domain/           Pure functions: money, pricing, costing, posting rules, state machines.
 PostgreSQL            Integrity rules that must hold for every writer.
 ```

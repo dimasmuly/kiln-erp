@@ -8,7 +8,7 @@ EmberKV is a separate process that can restart, be upgraded or fail. "The ERP go
 
 ## Decision
 
-Every call goes through `src/server/kv/`. Each feature decides explicitly, and logs a structured `{"msg":"emberkv degraded","feature":…}` line whenever it falls back. Client timeout is 1.5 s.
+Every call goes through `src/server/kv/`, which adapts the SDK kit's features. The kit implements these modes, so any app using it gets the same behaviour. Each feature decides explicitly, and logs a structured `{"msg":"emberkv degraded","feature":…}` line whenever it falls back. Client timeout is 1.5 s.
 
 | Feature | Mode | Reasoning |
 |---|---|---|
